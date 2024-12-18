@@ -1,0 +1,17 @@
+api:
+  insecure: true
+  dashboard: true
+
+entryPoints:
+  web:
+    address: ":80"
+  metrics:
+    address: ":8082"
+
+providers:
+  docker:
+    exposedByDefault: false
+
+metrics:
+  prometheus:
+    entryPoint: metrics

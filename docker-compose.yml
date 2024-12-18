@@ -1,0 +1,82 @@
+version: "3.9"
+
+services:
+  nodeapp:
+    build:
+      context: .
+      args:
+        NODE_ENV: production
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    command: ["npm", "run", "start"]
+    networks:
+      - sample-net
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.nodeapp.rule: "PathPrefix(`/`)"
+      traefik.http.routers.nodeapp.entrypoints: "web"
+      traefik.http.services.nodeapp-service.loadBalancer.server.port: "3000"
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - sample-net
+
+  grafana:
+    image: grafana/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - sample-net
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v2.10.7
+    ports:
+      - "80:80"
+      - "8082:8082"
+    volumes:
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - sample-net
+
+  node-exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.rootfs=/host"
+    networks:
+      - sample-net
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - sample-net
+
+networks:
+  sample-net:
+
+volumes:
+  prom_data:
